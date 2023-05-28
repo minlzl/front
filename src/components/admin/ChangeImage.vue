@@ -1,0 +1,104 @@
+<template>
+  <div style="float: left">
+    <el-button class="btn" @click="toggleShow">修改头像</el-button>
+    <my-upload field="file"
+               @crop-success="cropSuccess"
+               @crop-upload-success="cropUploadSuccess"
+               @crop-upload-fail="cropUploadFail"
+               v-model="show"
+               :width="300"
+               :height="300"
+               :params="params"
+               :headers="headers"
+               img-format="png">
+    </my-upload>
+    <img :src="imgDataUrl">
+  </div>
+</template>
+
+<script>
+  import myUpload from 'vue-image-crop-upload/upload-2'
+
+  export default {
+    name: 'ChangeImage',
+    components:{myUpload},
+    data() {
+      return{
+        show: false,
+        params: {
+        },
+        headers: {
+        },
+        imgDataUrl: ''
+      }
+    },
+    methods: {
+      toggleShow() {
+        this.show = !this.show;
+      },
+      /**
+       * crop success
+       *
+       * [param] imgDataUrl
+       * [param] field
+       */
+      cropSuccess(imgDataUrl, field){
+        console.log('-------- crop success --------');
+        this.imgDataUrl = imgDataUrl;
+        let datax = this.base64Tofile(imgDataUrl, field + ".png")
+        let d = new FormData();
+        d.append('file', datax)
+        // let config = {headers : {'Con' : 'multipart/form-data'}}
+        this.$axios.post('/covers',d)
+                .then(resp=>{
+                  this.url = resp.data.data
+                  this.$message.warning('上传成功')
+                }).catch(res=>{
+          console.log(res)
+          this.$message.warning('上传失败')
+        })
+      },
+      /**
+       * upload success
+       *
+       * [param] jsonData   服务器返回数据，已进行json转码
+       * [param] field
+       */
+      cropUploadSuccess(jsonData, field){
+        console.log('-------- upload success --------');
+        console.log(jsonData);
+        console.log('field: ' + field);
+      },
+      /**
+       * upload fail
+       *
+       * [param] status    server api return error status, like 500
+       * [param] field
+       */
+      cropUploadFail(status, field){
+        console.log('-------- upload fail --------');
+        console.log(status);
+        console.log('field: ' + field);
+      },
+      base64Tofile(base64Str, fileName) {
+        let arr = base64Str.split(','),
+                mime = arr[0].match(/:(.*?);/)[1], //base64解析出来的图片类型
+                bstr = atob(arr[1]), //对base64串进行操作，去掉url头，并转换为byte   atob为window内置方法
+                len = bstr.length,
+                ab = new ArrayBuffer(len), //将ASCII码小于0的转换为大于0
+                u8arr = new Uint8Array(ab); //
+        while (len--) {
+          u8arr[len] = bstr.charCodeAt(len)
+        }
+        // 创建新的 File 对象实例[utf-8内容，文件名称或者路径，[可选参数，type：文件中的内容mime类型]]
+        return new File([u8arr], fileName, {
+          type: mime
+        })
+      }
+    }
+  }
+</script>
+
+<style scoped>
+
+</style>
